@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Service - SolvHub</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo"><i class='bx bxs-bolt-circle'></i> SolvHub</a>
+            <ul class="nav-links ml-auto">
+                <li><a href="index.html">Cancel</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container section" style="max-width: 800px;">
+        <h2 class="mb-4">Book a Service</h2>
+        
+        <div class="grid grid-cols-2">
+            <!-- Provider Info -->
+            <div class="card">
+                <div class="card-body" id="provider-info">
+                    <div class="text-center py-5">
+                        <i class='bx bx-loader-alt bx-spin' style="font-size: 2rem; color: var(--primary);"></i>
+                        <p>Loading provider details...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Booking Form -->
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="mb-4">Appointment Details</h3>
+                    <form id="booking-form">
+                        <input type="hidden" id="provider-id">
+                        
+                        <div class="form-group">
+                            <label class="form-label">Service Type</label>
+                            <input type="text" id="service-type" class="form-control" required placeholder="e.g. Electrical Repair">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Preferred Date</label>
+                            <input type="date" id="date" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Preferred Time</label>
+                            <input type="time" id="time" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Problem Description</label>
+                            <textarea id="notes" class="form-control" rows="4" placeholder="Describe what you need help with..." required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-block">Confirm Booking</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = State.getUser();
+            if (!user || user.role !== 'customer') {
+                showAlert('Please login as a customer to book services.', 'warning');
+                setTimeout(() => window.location.href = 'login.html', 1500);
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const providerId = urlParams.get('providerId');
+            
+            if (!providerId) {
+                window.location.href = 'services.html';
+                return;
+            }
+            
+            document.getElementById('provider-id').value = providerId;
+            
+            try {
+                const response = await fetch(`${API_URL}/providers/${providerId}`);
+                if (response.ok) {
+                    const provider = await response.json();
+                    renderProviderInfo(provider);
+                } else {
+                    renderMockProvider();
+                }
+            } catch (error) {
+                renderMockProvider();
+            }
+        });
+
+        function renderProviderInfo(provider) {
+            document.getElementById('provider-info').innerHTML = `
+                <div class="text-center mb-4">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1rem;">
+                        ${provider.name.charAt(0)}
+                    </div>
+                    <h3>${provider.name}</h3>
+                    <p class="text-muted"><i class='bx bxs-star' style="color: #F59E0B"></i> ${provider.rating || 0} (${provider.reviews || 0} reviews)</p>
+                </div>
+                <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+                <p><strong><i class='bx bx-map'></i> Area:</strong> ${provider.serviceArea || 'N/A'}</p>
+                <p class="mt-2"><strong><i class='bx bx-briefcase'></i> Experience:</strong> ${provider.experience || 0} years</p>
+                <p class="mt-2"><strong><i class='bx bx-check-shield'></i> Verified Professional</strong></p>
+            `;
+        }
+        
+        function renderMockProvider() {
+            renderProviderInfo({
+                name: 'Professional Service Provider',
+                serviceArea: 'Downtown',
+                experience: 5
+            });
+        }
+
+        document.getElementById('booking-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = State.getUser();
+            
+            const bookingData = {
+                customerId: user.id,
+                providerId: document.getElementById('provider-id').value,
+                serviceType: document.getElementById('service-type').value,
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                notes: document.getElementById('notes').value
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/bookings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bookingData)
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert('Booking confirmed successfully!');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                } else {
+                    showAlert(data.message || 'Failed to book service', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Network error. Ensure server is running.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

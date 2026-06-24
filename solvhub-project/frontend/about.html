@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About SolvHub - Empowering Communities</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <style>
+        .about-hero {
+            background-color: var(--primary);
+            color: white;
+            padding: 6rem 0;
+            text-align: center;
+        }
+        .about-hero h1 { font-size: 3rem; margin-bottom: 1rem; }
+        
+        .mission-vision { padding: 5rem 0; }
+        .mv-card {
+            padding: 3rem;
+            text-align: center;
+            height: 100%;
+        }
+        .mv-card i {
+            font-size: 4rem;
+            color: var(--secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .impact-section {
+            background-color: var(--surface);
+            padding: 5rem 0;
+        }
+        
+        .stat-card {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo"><i class='bx bxs-bolt-circle'></i> SolvHub</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><i class='bx bx-menu'></i></button>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="services.html">Services</a></li>
+                <li><a href="about.html" class="active">About</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+            <div class="nav-buttons" id="nav-buttons"></div>
+        </div>
+    </nav>
+
+    <header class="about-hero">
+        <div class="container">
+            <h1>Our Mission & Vision</h1>
+            <p style="font-size: 1.2rem; color: rgba(255,255,255,0.9); max-width: 700px; margin: 0 auto;">
+                Building a bridge between everyday people needing trusted help, and skilled individuals looking for meaningful opportunities.
+            </p>
+        </div>
+    </header>
+
+    <section class="mission-vision container">
+        <div class="grid grid-cols-2">
+            <div class="card mv-card">
+                <i class='bx bx-target-lock'></i>
+                <h2>Our Mission</h2>
+                <p class="text-muted">To democratize access to local services while creating flexible earning opportunities for skilled individuals in every community. We strive to make finding an electrician or technician as simple as ordering food.</p>
+            </div>
+            <div class="card mv-card">
+                <i class='bx bx-globe'></i>
+                <h2>Our Vision</h2>
+                <p class="text-muted">A world where localized economies thrive, and every individual—regardless of gender, age, or background—has a platform to showcase their skills, find dignified work, and achieve financial independence.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="impact-section">
+        <div class="container text-center">
+            <h2 class="mb-2">Social Impact & Empowerment</h2>
+            <p class="text-muted mb-5" style="max-width: 600px; margin: 0 auto;">We actively focus on empowering women, college students, retired professionals, and disabled individuals by providing an accessible gig-economy platform.</p>
+            
+            <div class="grid grid-cols-4 mt-5">
+                <div class="stat-card">
+                    <div class="stat-number">40%</div>
+                    <p class="text-muted">Women Providers</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">25%</div>
+                    <p class="text-muted">Student Technicians</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">15%</div>
+                    <p class="text-muted">Retired Experts</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">10K+</div>
+                    <p class="text-muted">Jobs Completed</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div>
+                    <h3 style="color: white; display: flex; align-items: center; gap: 0.5rem;"><i class='bx bxs-bolt-circle'></i> SolvHub</h3>
+                    <p>Connecting people through trusted local services while empowering communities.</p>
+                </div>
+                <div>
+                    <h4 style="color: white;">Quick Links</h4>
+                    <ul class="footer-link-list">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="about.html">About Us</a></li>
+                        <li><a href="services.html">Services</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 SolvHub. All rights reserved.</div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

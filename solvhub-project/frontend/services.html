@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services - SolvHub</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <style>
+        .page-header {
+            background-color: var(--surface);
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .filters input, .filters select {
+            flex-grow: 1;
+            min-width: 200px;
+        }
+        
+        .provider-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .provider-header {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .provider-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: rgba(79, 70, 229, 0.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .rating { color: #F59E0B; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;}
+        
+        .skills-list { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo"><i class='bx bxs-bolt-circle'></i> SolvHub</a>
+            <button class="mobile-menu-btn" id="mobile-menu-btn"><i class='bx bx-menu'></i></button>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="services.html" class="active">Services</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+            <div class="nav-buttons" id="nav-buttons"></div>
+        </div>
+    </nav>
+
+    <div class="page-header">
+        <div class="container">
+            <h1>Find Trusted Providers</h1>
+            <p class="text-muted">Browse top-rated electricians, plumbers, and technicians in your area.</p>
+        </div>
+    </div>
+
+    <section class="container section">
+        <div class="filters card card-body" style="flex-direction: row; align-items: flex-end;">
+            <div style="flex-grow: 1;">
+                <label class="form-label">Service / Skill</label>
+                <input type="text" id="filter-skill" class="form-control" placeholder="e.g. Electrical Repair">
+            </div>
+            <div style="flex-grow: 1;">
+                <label class="form-label">Location</label>
+                <input type="text" id="filter-location" class="form-control" placeholder="e.g. Downtown">
+            </div>
+            <button class="btn btn-primary" onclick="loadProviders()" style="height: 48px;">Filter Results</button>
+        </div>
+
+        <div class="grid grid-cols-3" id="providers-grid">
+            <!-- Providers loaded by JS -->
+            <div class="text-center" style="grid-column: 1 / -1; padding: 2rem;">
+                <i class='bx bx-loader-alt bx-spin' style="font-size: 2rem; color: var(--primary);"></i>
+                <p>Loading providers...</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer same as index, omitting for brevity in actual site, but included here for completeness -->
+    <footer class="footer">
+        <div class="container text-center">
+            <p>&copy; 2026 SolvHub. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check URL params for initial load
+            const urlParams = new URLSearchParams(window.location.search);
+            const skill = urlParams.get('skill') || urlParams.get('category');
+            const location = urlParams.get('location');
+            
+            if (skill) document.getElementById('filter-skill').value = skill;
+            if (location) document.getElementById('filter-location').value = location;
+            
+            loadProviders();
+        });
+
+        async function loadProviders() {
+            const skill = document.getElementById('filter-skill').value;
+            const location = document.getElementById('filter-location').value;
+            const grid = document.getElementById('providers-grid');
+            
+            let url = `${API_URL}/providers?`;
+            if (skill) url += `skill=${encodeURIComponent(skill)}&`;
+            if (location) url += `location=${encodeURIComponent(location)}`;
+            
+            try {
+                const response = await fetch(url);
+                const providers = await response.json();
+                
+                if (!Array.isArray(providers) || providers.length === 0) {
+                    grid.innerHTML = `<div class="card card-body text-center" style="grid-column: 1 / -1;"><p>No providers found matching your criteria.</p></div>`;
+                    return;
+                }
+                
+                grid.innerHTML = providers.map(p => `
+                    <div class="card provider-card">
+                        <div class="card-body" style="flex-grow: 1;">
+                            <div class="provider-header">
+                                <div class="provider-avatar">${p.name.charAt(0)}</div>
+                                <div>
+                                    <h3 style="margin:0; font-size:1.2rem;">${p.name}</h3>
+                                    <div class="rating"><i class='bx bxs-star'></i> ${p.rating || 0} (${p.reviews || 0} reviews)</div>
+                                </div>
+                            </div>
+                            <p class="text-muted mb-2"><i class='bx bx-map'></i> ${p.serviceArea || 'N/A'}</p>
+                            <p class="text-muted"><i class='bx bx-briefcase'></i> ${p.experience || 0} years exp.</p>
+                            
+                            <div class="skills-list mt-3">
+                                ${(Array.isArray(p.skills) ? p.skills : []).map(s => `<span class="badge badge-primary">${s}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: var(--bg-color);">
+                            <button onclick="bookProvider('${p.id}')" class="btn btn-primary btn-block">Book Now</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error fetching providers:', error);
+                showAlert('Could not connect to backend. Please ensure server is running.', 'warning');
+                grid.innerHTML = `<div class="card card-body text-center" style="grid-column: 1 / -1;"><p>Unable to load providers. Make sure the backend server is running on http://localhost:3000</p></div>`;
+            }
+        }
+        
+        function bookProvider(providerId) {
+            const user = State.getUser();
+            if (!user) {
+                showAlert('Please login to book a service.', 'error');
+                setTimeout(() => window.location.href = 'login.html', 1500);
+                return;
+            }
+            window.location.href = `booking.html?providerId=${providerId}`;
+        }
+    </script>
+</body>
+</html>

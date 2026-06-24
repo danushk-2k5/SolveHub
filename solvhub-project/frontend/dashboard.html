@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provider Dashboard - SolvHub</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <style>
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: calc(100vh - 4.5rem);
+        }
+        
+        .sidebar {
+            background-color: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 2rem 1rem;
+        }
+        
+        .sidebar-menu li { margin-bottom: 0.5rem; }
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background-color: rgba(79, 70, 229, 0.1);
+            color: var(--primary);
+        }
+        
+        .main-content {
+            padding: 2rem;
+            background-color: var(--bg-color);
+        }
+        
+        .stat-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .job-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .job-status {
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo"><i class='bx bxs-bolt-circle'></i> SolvHub</a>
+            <div class="nav-buttons" id="nav-buttons"></div>
+        </div>
+    </nav>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="text-center mb-5">
+                <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 1rem;" id="provider-initial">
+                    P
+                </div>
+                <h3 id="provider-name" style="margin-bottom: 0;">Provider Name</h3>
+                <p class="text-muted text-sm">Professional</p>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active"><i class='bx bxs-dashboard'></i> Dashboard</a></li>
+                <li><a href="#"><i class='bx bx-calendar'></i> My Bookings</a></li>
+                <li><a href="#"><i class='bx bx-wallet'></i> Earnings</a></li>
+                <li><a href="#"><i class='bx bx-user'></i> Profile</a></li>
+                <li><a href="#" onclick="State.logout()"><i class='bx bx-log-out'></i> Logout</a></li>
+            </ul>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <h2 class="mb-4">Welcome back!</h2>
+            
+            <!-- Stats -->
+            <div class="grid grid-cols-3 mb-5">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);"><i class='bx bx-briefcase'></i></div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.5rem;">12</h3>
+                        <p class="text-muted">Total Jobs</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--secondary);"><i class='bx bx-check-circle'></i></div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.5rem;">10</h3>
+                        <p class="text-muted">Completed</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #D97706;"><i class='bx bxs-star'></i></div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.5rem;">4.9</h3>
+                        <p class="text-muted">Avg Rating</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Jobs List -->
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="mb-4">Recent Service Requests</h3>
+                    
+                    <div id="bookings-list">
+                        <div class="text-center py-4">
+                            <i class='bx bx-loader-alt bx-spin' style="font-size: 2rem; color: var(--primary);"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = State.getUser();
+            if (!user || user.role !== 'provider') {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            document.getElementById('provider-name').innerText = user.name;
+            document.getElementById('provider-initial').innerText = user.name.charAt(0);
+            
+            loadBookings(user.id);
+        });
+        
+        async function loadBookings(providerId) {
+            const list = document.getElementById('bookings-list');
+            try {
+                const response = await fetch(`${API_URL}/bookings/provider/${providerId}`);
+                if (response.ok) {
+                    const bookings = await response.json();
+                    renderBookings(bookings);
+                } else {
+                    renderMockBookings();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                renderMockBookings();
+            }
+        }
+        
+        function renderBookings(bookings) {
+            const list = document.getElementById('bookings-list');
+            
+            if (!bookings || bookings.length === 0) {
+                list.innerHTML = `<p class="text-center text-muted py-4">No service requests yet.</p>`;
+                return;
+            }
+            
+            list.innerHTML = bookings.map(b => `
+                <div class="job-card" id="job-${b.id}">
+                    <div>
+                        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.5rem;">
+                            <h4 style="margin: 0;">${b.serviceType}</h4>
+                            <span class="badge ${b.status === 'pending' ? 'badge-warning' : b.status === 'accepted' ? 'badge-primary' : 'badge-success'} job-status">
+                                ${b.status}
+                            </span>
+                        </div>
+                        <p class="text-muted"><i class='bx bx-calendar'></i> ${new Date(b.date).toLocaleDateString()} at ${b.time}</p>
+                        <p class="text-muted mt-2"><strong>Notes:</strong> ${b.notes || 'No notes'}</p>
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                        ${b.status === 'pending' ? `
+                            <button class="btn btn-secondary btn-sm" onclick="updateStatus('${b.id}', 'accepted')">Accept</button>
+                            <button class="btn btn-outline btn-sm" onclick="updateStatus('${b.id}', 'rejected')">Reject</button>
+                        ` : b.status === 'accepted' ? `
+                            <button class="btn btn-primary btn-sm" onclick="updateStatus('${b.id}', 'completed')">Mark Completed</button>
+                        ` : `
+                            <button class="btn btn-outline btn-sm" disabled>Finalized</button>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderMockBookings() {
+            renderBookings([
+                { id: '1', serviceType: 'Electrical Repair', status: 'pending', date: '2026-05-15', time: '10:00', notes: 'Need help fixing a broken socket in the kitchen.' },
+                { id: '2', serviceType: 'Ceiling Fan Installation', status: 'accepted', date: '2026-05-16', time: '14:30', notes: 'I have the fan, just need someone to install it.' }
+            ]);
+        }
+        
+        async function updateStatus(bookingId, status) {
+            try {
+                const response = await fetch(`${API_URL}/bookings/${bookingId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                
+                if (response.ok) {
+                    showAlert(`Booking ${status} successfully`);
+                    const user = State.getUser();
+                    loadBookings(user.id);
+                } else {
+                    showAlert('Failed to update booking', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Network error updating booking', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
