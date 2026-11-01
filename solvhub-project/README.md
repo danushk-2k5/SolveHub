@@ -42,7 +42,7 @@ solvhub-project
 
 ### Prerequisites
 *   [Node.js](https://nodejs.org/) installed on your machine.
-*   [XAMPP](https://www.apachefriends.org/index.html) installed for MySQL database.
+*   MongoDB Community Server installed locally, or a MongoDB Atlas connection URI.
 
 ### Step-by-step Guide
 
@@ -50,67 +50,32 @@ solvhub-project
     ```bash
     cd solvhub-project
     ```
-2.  **Set up MySQL with XAMPP**:
-    *   **Start XAMPP Services**: Open the XAMPP Control Panel and start the `Apache` and `MySQL` services.
-    *   **Create 'solvhub' Database**:
-        *   Open your web browser and go to `http://localhost/phpmyadmin`.
-        *   Click on the "New" button in the left sidebar or the "Databases" tab.
-        *   Enter `solvhub` as the database name.
-        *   Choose a collation (e.g., `utf8mb4_unicode_ci`) and click "Create".
-    *   **Configure Database Credentials**:
-        *   In your `backend` folder, create a file named `.env` if it doesn't exist.
-        *   Add the following lines to the `.env` file (default XAMPP MySQL username is `root` with no password):
-            ```
-            DB_HOST=localhost
-            DB_USER=root
-            DB_PASSWORD=
-            DB_NAME=solvhub
-            DB_DIALECT=mysql
-            JWT_SECRET=your_jwt_secret_key
-            JWT_EXPIRE=30d
-            ```
-            *(Replace `your_jwt_secret_key` with a strong, random string)*
-    *   **Troubleshooting MySQL (if needed)**: If you encounter issues starting MySQL or database errors (e.g., "Incorrect file format 'db'"), you can use the provided PowerShell script:
-        1.  Close the XAMPP Control Panel.
-        2.  Open PowerShell as **Administrator**.
-        3.  Navigate to your project root: `cd path/to/solvhub-project`
-        4.  Run the fix script: `.\fix-mysql.ps1`
-            This script will attempt to fix common MySQL corruption issues by restoring clean system tables and restarting the service.
-    *   **Run Sequelize Migrations (if applicable)**: If your project has database migrations defined (e.g., in `backend/migrations`), you might need to run them to create the necessary tables. (This step is not explicitly in your current project structure but is common for Sequelize projects).
-        ```bash
-        # Example: (You might need to install sequelize-cli globally or locally first)
-        # npm install -g sequelize-cli
-        # npx sequelize db:migrate
-        ```
-
-    *   **Importing Existing Data (Optional)**:
-        If you have a database backup (e.g., `solvhub_backup.sql`):
-        1. Go to `http://localhost/phpmyadmin`.
-        2. Select the `solvhub` database.
-        3. Click the **Import** tab.
-        4. Choose the `.sql` file and click **Import**.
+2.  **Configure MongoDB**:
+    *   Start the local MongoDB service, or create a MongoDB Atlas cluster.
+    *   Set `MONGO_URI` in `backend/.env`. The default is `mongodb://127.0.0.1:27017/solvhub`.
+    *   For Atlas, use the cluster connection URI and keep credentials in `.env`, not in source control.
+    *   Keep `JWT_SECRET` configured in the same file for authentication tokens.
+    *   MongoDB creates the `solvhub` database and collections when the application first writes data.
+    *   Existing MySQL/XAMPP data is not copied automatically; it remains untouched and requires a separate data migration.
 
 2.  **Install the necessary dependencies**:
     ```bash
     npm install
     ```
-    *(The `package.json` includes `express`, `cors`, `sequelize`, `mysql2`, and `dotenv`)*
-3.  **Start the server**:
+    *(The `package.json` includes `express`, `cors`, `mongoose`, and `dotenv`)*
+3.  **Start the API server**:
     ```bash
-    node backend/server.js
-    node backend/server.js # Or `npm start` if you have a start script defined
+    npm start
     ```
-    *You should see a message saying "SolvHub server running on http://localhost:3000".*
-4.  **View the Application**:
-    *   Open your web browser and navigate to exactly: `http://localhost:3000`
-    *   Alternatively, you can open `frontend/index.html` directly in your browser. The mock API allows for some basic functionality even if the Node server isn't running perfectly, but running it via Node is recommended.
+    *The API listens on port `5000` by default and starts after it connects to MongoDB.*
+4.  **Start the frontend** in a second terminal and open it in your browser:
+    ```bash
+    npm run client
+    ```
+    The frontend is served at `http://localhost:5173`.
 
 ## How to Share Your Database
-To share your current database records with someone else:
-1. Open **phpMyAdmin** and select the `solvhub` database.
-2. Click **Export** -> **Go**.
-3. Save the `.sql` file in the project directory.
-4. When sharing the folder, tell the recipient to **Import** this file into their local MySQL.
+Use MongoDB Database Tools (`mongodump` and `mongorestore`) or MongoDB Compass to export and import data. Do not share your `.env` file or database credentials.
 
 **Demo Accounts (For Testing):**
 *   **Customer:** `jane@example.com` / `password`

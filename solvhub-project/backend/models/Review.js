@@ -1,33 +1,32 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/db');
-const User = require('./User');
-const Technician = require('./Technician');
-const Booking = require('./Booking');
+const mongoose = require('mongoose');
 
-const Review = sequelize.define('Review', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    customerId: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'id' } },
-    technicianId: { type: DataTypes.INTEGER, allowNull: false, references: { model: Technician, key: 'id' } },
-    bookingId: { type: DataTypes.INTEGER, allowNull: false, unique: true, references: { model: Booking, key: 'id' } },
-    rating: { type: DataTypes.INTEGER, allowNull: false, validate: { min: 1, max: 5 } },
-    comment: { type: DataTypes.TEXT, allowNull: false }
-}, { timestamps: true });
+const reviewSchema = new mongoose.Schema({
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    technicianId: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', required: true },
+    bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', required: true, unique: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    comment: { type: String, required: true }
+}, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
-Review.belongsTo(User, { foreignKey: 'customerId', as: 'customer' });
-Review.belongsTo(Technician, { foreignKey: 'technicianId', as: 'technician' });
-Review.belongsTo(Booking, { foreignKey: 'bookingId', as: 'booking' });
-
-// Recalculate technician rating after review save
-Review.afterCreate(async (review) => {
-    const { fn, col } = require('sequelize');
-    const result = await Review.findOne({
-        where: { technicianId: review.technicianId },
-        attributes: [[fn('AVG', col('rating')), 'avgRating'], [fn('COUNT', col('id')), 'total']]
-    });
-    await Technician.update(
-        { rating: parseFloat(result.dataValues.avgRating).toFixed(1), totalReviews: result.dataValues.total },
-        { where: { id: review.technicianId } }
-    );
+reviewSchema.virtual('customer', {
+    ref: 'User',
+    localField: 'customerId',
+    foreignField: '_id',
+    justOne: true
 });
 
-module.exports = Review;
+reviewSchema.virtual('technician', {
+    ref: 'Technician',
+    localField: 'technicianId',
+    foreignField: '_id',
+    justOne: true
+});
+
+reviewSchema.virtual('booking', {
+    ref: 'Booking',
+    localField: 'bookingId',
+    foreignField: '_id',
+    justOne: true
+});
+
+module.exports = mongoose.models.Review || mongoose.model('Review', reviewSchema);

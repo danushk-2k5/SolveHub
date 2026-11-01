@@ -1,9 +1,9 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-const { sequelize } = require('../config/db');
+const mongoose = require('mongoose');
+const { connectDB } = require('../config/db');
 
-// Import all models so Sequelize registers them
 require('../models/User');
 require('../models/Technician');
 require('../models/Booking');
@@ -11,13 +11,13 @@ require('../models/Review');
 
 (async () => {
     try {
-        await sequelize.authenticate();
-        console.log('Connected to MySQL');
-        await sequelize.sync({ alter: true }); // alter: safe update, never drops tables
-        console.log('All tables created successfully!');
-        process.exit(0);
-    } catch (err) {
-        console.error('Error:', err.message);
-        process.exit(1);
+        await connectDB();
+        await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
+        console.log('MongoDB collections and indexes are ready');
+    } catch (error) {
+        console.error('Error:', error.message);
+        process.exitCode = 1;
+    } finally {
+        await mongoose.disconnect();
     }
 })();

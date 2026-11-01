@@ -25,7 +25,12 @@ router.post('/me/photo', protect, authorize('technician'), upload.single('photo'
     try {
         if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
         const photoUrl = `/uploads/${req.file.filename}`;
-        await Technician.update({ profilePhoto: photoUrl }, { where: { userId: req.user.id } });
+        const technician = await Technician.findOneAndUpdate(
+            { userId: req.user.id },
+            { profilePhoto: photoUrl },
+            { new: true, runValidators: true }
+        );
+        if (!technician) return res.status(404).json({ message: 'Technician profile not found' });
         res.json({ success: true, profilePhoto: photoUrl });
     } catch (err) { next(err); }
 });

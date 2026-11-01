@@ -1,7 +1,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
-const bcrypt = require('bcryptjs');
-const { sequelize } = require('../config/db');
+const mongoose = require('mongoose');
+const { connectDB } = require('../config/db');
 const User = require('../models/User');
 const Technician = require('../models/Technician');
 
@@ -88,54 +88,46 @@ const technicians = [
 
 (async () => {
     try {
-        await sequelize.authenticate();
-        console.log('Connected to MySQL\n');
+        await connectDB();
 
         for (const t of technicians) {
             // Skip if email already exists
-            const exists = await User.findOne({ where: { email: t.email } });
+            const exists = await User.findOne({ email: t.email });
             if (exists) {
                 console.log(`⚠️  Skipped (already exists): ${t.email}`);
                 continue;
             }
 
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(t.password, salt);
-
             const user = await User.create({
                 name: t.name,
                 email: t.email,
                 phone: t.phone,
-                password: hashedPassword,
+                password: t.password,  // model beforeCreate hook hashes this
                 role: 'technician',
                 isActive: true,
                 isVerified: true
             });
 
             await Technician.create({
-                userId: user.id,
-                skills: JSON.stringify(t.skills),
+                userId: user._id,
+                skills: t.skills,
                 experience: t.experience,
                 hourlyRate: t.hourlyRate,
                 serviceArea: t.serviceArea,
                 bio: t.bio,
                 profilePhoto: t.profilePhoto,
                 isAvailable: t.isAvailable,
-                rating: (Math.random() * 1 + 4).toFixed(1),
+                rating: Number((Math.random() * 1 + 4).toFixed(1)),
                 totalReviews: Math.floor(Math.random() * 150 + 50)
             });
 
-            console.log(`✅ Created: ${t.name} | ${t.email} | Password: ${t.password}`);
+            console.log(`Created: ${t.name} | ${t.email}`);
         }
 
-        console.log('\n--- Login Credentials ---');
-        technicians.forEach(t => {
-            console.log(`${t.name.padEnd(20)} | ${t.email.padEnd(30)} | ${t.password}`);
-        });
-
-        process.exit(0);
+        await mongoose.disconnect();
     } catch (err) {
         console.error('Error:', err.message);
-        process.exit(1);
+        await mongoose.disconnect();
+        process.exitCode = 1;
     }
 })();

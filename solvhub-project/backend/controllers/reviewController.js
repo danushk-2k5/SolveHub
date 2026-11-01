@@ -1,77 +1,114 @@
-const { fn, col } = require('sequelize');
+const mongoose = require('mongoose');
 const Review = require('../models/Review');
 const Booking = require('../models/Booking');
 const Technician = require('../models/Technician');
-const User = require('../models/User');
+
+const pagination = (page, limit) => ({
+    page: Math.max(1, Number.parseInt(page, 10) || 1),
+    limit: Math.max(1, Number.parseInt(limit, 10) || 10)
+});
+
+const refreshTechnicianRating = async (technicianId) => {
+    const [stats] = await Review.aggregate([
+        { $match: { technicianId: new mongoose.Types.ObjectId(String(technicianId)) } },
+        { $group: { _id: null, avgRating: { $avg: '$rating' }, totalReviews: { $sum: 1 } } }
+    ]);
+
+    await Technician.findByIdAndUpdate(technicianId, {
+        rating: stats ? Number(stats.avgRating.toFixed(1)) : 0,
+        totalReviews: stats ? stats.totalReviews : 0
+    });
+};
 
 exports.createReview = async (req, res, next) => {
     try {
         const { technicianId, bookingId, rating, comment } = req.body;
-
-        const booking = await Booking.findByPk(bookingId);
+        const booking = await Booking.findById(bookingId);
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
-        if (booking.customerId !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
-        if (booking.status !== 'completed') return res.status(400).json({ message: 'Can only review completed bookings' });
+        if (String(booking.customerId) !== req.user.id)
+            return res.status(403).json({ message: 'Not authorized' });
+        if (booking.status !== 'completed')
+            return res.status(400).json({ message: 'Can only review completed bookings' });
+        if (String(booking.technicianId) !== String(technicianId))
+            return res.status(400).json({ message: 'Technician does not match the booking' });
+        if (await Review.exists({ bookingId }))
+            return res.status(400).json({ message: 'Review already exists for this booking' });
 
-        const existing = await Review.findOne({ where: { bookingId } });
-        if (existing) return res.status(400).json({ message: 'Review already exists for this booking' });
-
-        const review = await Review.create({ customerId: req.user.id, technicianId, bookingId, rating, comment });
+        const review = await Review.create({
+            customerId: req.user.id, technicianId, bookingId, rating, comment
+        });
+        await refreshTechnicianRating(technicianId);
         res.status(201).json({ success: true, data: review });
-    } catch (error) { next(error); }
+    } catch (error) {
+        next(error);
+    }
 };
 
 exports.getTechnicianReviews = async (req, res, next) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
-
-        const { rows, count } = await Review.findAndCountAll({
-            where: { technicianId: req.params.technicianId },
-            include: [{ model: User, as: 'customer', attributes: ['name', 'avatar'] }],
-            order: [['createdAt', 'DESC']],
-            limit: parseInt(limit), offset
-        });
-
-        const stats = await Review.findOne({
-            where: { technicianId: req.params.technicianId },
-            attributes: [[fn('AVG', col('rating')), 'avgRating'], [fn('COUNT', col('id')), 'totalReviews']]
-        });
-
-        res.json({ success: true, count: rows.length, total: count, stats: stats.dataValues, data: rows });
-    } catch (error) { next(error); }
+        const { page, limit } = pagination(req.query.page, req.query.limit);
+        const query = { technicianId: req.params.technicianId };
+        const [rows, total, stats] = await Promise.all([
+            Review.find(query)
+                .populate('customer', 'name avatar')
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit),
+            Review.countDocuments(query),
+            Review.aggregate([
+                { $match: { technicianId: new mongoose.Types.ObjectId(req.params.technicianId) } },
+                { $group: { _id: null, avgRating: { $avg: '$rating' }, totalReviews: { $sum: 1 } } }
+            ])
+        ]);
+        const reviewStats = stats[0]
+            ? { avgRating: stats[0].avgRating, totalReviews: stats[0].totalReviews }
+            : { avgRating: 0, totalReviews: 0 };
+        res.json({ success: true, count: rows.length, total, stats: reviewStats, data: rows });
+    } catch (error) {
+        next(error);
+    }
 };
 
 exports.getMyReviews = async (req, res, next) => {
     try {
-        const reviews = await Review.findAll({
-            where: { customerId: req.user.id },
-            include: [{ model: Technician, as: 'technician', include: [{ model: User, as: 'user', attributes: ['name', 'avatar'] }] }],
-            order: [['createdAt', 'DESC']]
-        });
+        const reviews = await Review.find({ customerId: req.user.id })
+            .populate({ path: 'technician', populate: { path: 'user', select: 'name avatar' } })
+            .sort({ createdAt: -1 });
         res.json({ success: true, count: reviews.length, data: reviews });
-    } catch (error) { next(error); }
+    } catch (error) {
+        next(error);
+    }
 };
 
 exports.updateReview = async (req, res, next) => {
     try {
-        const review = await Review.findByPk(req.params.id);
+        const review = await Review.findById(req.params.id);
         if (!review) return res.status(404).json({ message: 'Review not found' });
-        if (review.customerId !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
+        if (String(review.customerId) !== req.user.id)
+            return res.status(403).json({ message: 'Not authorized' });
 
-        await review.update({ rating: req.body.rating, comment: req.body.comment });
+        if (req.body.rating !== undefined) review.rating = req.body.rating;
+        if (req.body.comment !== undefined) review.comment = req.body.comment;
+        await review.save();
+        await refreshTechnicianRating(review.technicianId);
         res.json({ success: true, data: review });
-    } catch (error) { next(error); }
+    } catch (error) {
+        next(error);
+    }
 };
 
 exports.deleteReview = async (req, res, next) => {
     try {
-        const review = await Review.findByPk(req.params.id);
+        const review = await Review.findById(req.params.id);
         if (!review) return res.status(404).json({ message: 'Review not found' });
-        if (review.customerId !== req.user.id && req.user.role !== 'admin')
+        if (String(review.customerId) !== req.user.id && req.user.role !== 'admin')
             return res.status(403).json({ message: 'Not authorized' });
 
-        await review.destroy();
+        const technicianId = review.technicianId;
+        await review.deleteOne();
+        await refreshTechnicianRating(technicianId);
         res.json({ success: true, message: 'Review deleted successfully' });
-    } catch (error) { next(error); }
+    } catch (error) {
+        next(error);
+    }
 };

@@ -16,9 +16,6 @@ const bookingRoutes = require('./routes/bookingRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
-// Connect to database
-connectDB();
-
 const app = express();
 
 // Serve uploaded images
@@ -75,15 +72,19 @@ app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-    console.log(`SolvHub server running on port ${PORT}`);
-});
+const startServer = async () => {
+    try {
+        await connectDB();
+        return app.listen(PORT, () => {
+            console.log(`SolvHub server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error('MongoDB Connection Error:', error.message);
+        process.exitCode = 1;
+        return null;
+    }
+};
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
-    console.error(`Error: ${err.message}`);
-    // Close server & exit process
-    server.close(() => process.exit(1));
-});
+startServer();
 
 module.exports = app;

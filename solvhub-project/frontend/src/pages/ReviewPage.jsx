@@ -31,7 +31,7 @@ const ReviewPage = () => {
         setError('');
         try {
             await reviewAPI.create({
-                technicianId: booking.technicianId,
+                technicianId: booking.technicianId?._id || booking.technicianId,
                 bookingId: booking.id,
                 rating,
                 comment
