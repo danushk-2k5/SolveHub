@@ -1,75 +1,50 @@
-# SolvHub - MySQL XAMPP Deep Fix Script
-# Fixes: "Incorrect file format 'db'" corrupted privilege tables
+# Fix XAMPP MySQL/MariaDB crash
 # Run as Administrator
 
-Write-Host "=== SolvHub MySQL Deep Fix ===" -ForegroundColor Cyan
+$xamppPath = "C:\xampp"
+$dataPath = "$xamppPath\mysql\data"
+$backupPath = "$xamppPath\mysql\data_backup"
 
-$xamppPath   = "C:\xampp"
-$dataPath    = "$xamppPath\mysql\data"
-$backupPath  = "$xamppPath\mysql\data_backup"
-$mysqlBin    = "$xamppPath\mysql\bin\mysqld.exe"
-$mysqlClient = "$xamppPath\mysql\bin\mysql.exe"
-$mysqlUpgrade= "$xamppPath\mysql\bin\mysql_upgrade.exe"
+Write-Host "Fixing XAMPP MySQL/MariaDB..." -ForegroundColor Cyan
 
-# Step 1: Kill mysqld
-Write-Host "`n[1] Stopping MySQL..." -ForegroundColor Yellow
+# 1. Stop any running MySQL/MariaDB processes
+Write-Host "Stopping MySQL/MariaDB processes..." -ForegroundColor Yellow
 Get-Process -Name "mysqld" -ErrorAction SilentlyContinue | Stop-Process -Force
-Start-Sleep -Seconds 2
-Write-Host "    Done" -ForegroundColor Green
+Get-Process -Name "mariadb" -ErrorAction SilentlyContinue | Stop-Process -Force
 
-# Step 2: Backup current data folder
-Write-Host "`n[2] Backing up data folder to mysql\data_backup..." -ForegroundColor Yellow
-if (Test-Path $backupPath) { Remove-Item $backupPath -Recurse -Force }
-Copy-Item $dataPath $backupPath -Recurse
-Write-Host "    Backup created at $backupPath" -ForegroundColor Green
-
-# Step 3: Replace corrupted mysql system db with fresh one from XAMPP defaults
-Write-Host "`n[3] Restoring clean mysql system database..." -ForegroundColor Yellow
-$freshMysqlDb = "$xamppPath\mysql\backup\mysql"
-$currentMysqlDb = "$dataPath\mysql"
-
-if (Test-Path $freshMysqlDb) {
-    Remove-Item $currentMysqlDb -Recurse -Force
-    Copy-Item $freshMysqlDb $currentMysqlDb -Recurse
-    Write-Host "    Restored from XAMPP backup" -ForegroundColor Green
-} else {
-    # No backup folder — use mysql_install_db instead
-    Write-Host "    No backup found, running mysql_install_db..." -ForegroundColor Yellow
-    $installDb = "$xamppPath\mysql\bin\mysql_install_db.exe"
-    if (Test-Path $installDb) {
-        & $installDb --datadir="$dataPath" --password="" 2>$null
-        Write-Host "    mysql_install_db completed" -ForegroundColor Green
-    } else {
-        Write-Host "    Manually copy a clean 'mysql' folder into $dataPath" -ForegroundColor Red
-    }
+# 2. Check if data_backup exists and restore clean data files
+if (Test-Path $backupPath) {
+    Write-Host "Restoring clean data files..." -ForegroundColor Yellow
+    
+    # Remove corrupted files
+    Get-ChildItem $dataPath -File | Where-Object { $_.Name -match "^(ibdata|ib_logfile|ibtmp)" } | Remove-Item -Force
+    
+    # Copy clean files from backup
+    Copy-Item "$backupPath\ibdata1" $dataPath -Force -ErrorAction SilentlyContinue
+    Copy-Item "$backupPath\ib_logfile0" $dataPath -Force -ErrorAction SilentlyContinue
+    Copy-Item "$backupPath\ib_logfile1" $dataPath -Force -ErrorAction SilentlyContinue
+    
+    Write-Host "Data files restored from backup" -ForegroundColor Green
 }
 
-# Step 4: Delete stale InnoDB files
-Write-Host "`n[4] Cleaning InnoDB temp files..." -ForegroundColor Yellow
-@("ib_logfile0","ib_logfile1","ib_buffer_pool","ibtmp1") | ForEach-Object {
-    $f = "$dataPath\$_"
-    if (Test-Path $f) { Remove-Item $f -Force; Write-Host "    Deleted $_" -ForegroundColor Green }
+# 3. Check for Windows MySQL service conflict
+Write-Host "Checking for Windows MySQL service conflict..." -ForegroundColor Yellow
+$mysqlService = Get-Service -Name "MySQL80" -ErrorAction SilentlyContinue
+if ($mysqlService -and $mysqlService.Status -eq "Running") {
+    Write-Host "Found MySQL80 Windows service running - stopping it..." -ForegroundColor Red
+    Stop-Service MySQL80 -Force -ErrorAction SilentlyContinue
 }
 
-# Step 5: Start MySQL and wait
-Write-Host "`n[5] Starting MySQL..." -ForegroundColor Yellow
-Start-Process $mysqlBin -ArgumentList "--defaults-file=$xamppPath\mysql\bin\my.ini" -WindowStyle Hidden
-
-$ready = $false
-for ($i = 1; $i -le 20; $i++) {
-    Start-Sleep -Seconds 1
-    $test = & $mysqlClient -u root --connect-timeout=2 -e "SELECT 1;" 2>$null
-    if ($LASTEXITCODE -eq 0) { $ready = $true; Write-Host "    MySQL ready in ${i}s" -ForegroundColor Green; break }
+$mysql57 = Get-Service -Name "MySQL57" -ErrorAction SilentlyContinue
+if ($mysql57 -and $mysql57.Status -eq "Running") {
+    Write-Host "Found MySQL57 Windows service running - stopping it..." -ForegroundColor Red
+    Stop-Service MySQL57 -Force -ErrorAction SilentlyContinue
 }
 
-if (-not $ready) {
-    Write-Host "    MySQL still not responding. Check: $dataPath\mysql_error.log" -ForegroundColor Red
-    exit 1
-}
-
-# Step 6: Create solvhub database
-Write-Host "`n[6] Creating 'solvhub' database..." -ForegroundColor Yellow
-& $mysqlClient -u root -e "CREATE DATABASE IF NOT EXISTS solvhub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-Write-Host "    Database 'solvhub' ready!" -ForegroundColor Green
-
-Write-Host "`n=== All done! Run: node backend/server.js ===" -ForegroundColor Cyan
+Write-Host "`nDone! Now:" -ForegroundColor Cyan
+Write-Host "1. Open XAMPP Control Panel as Administrator" -ForegroundColor White
+Write-Host "2. Stop any MySQL/MariaDB that's running" -ForegroundColor White  
+Write-Host "3. Click 'Explorer' in XAMPP -> go to mysql/data" -ForegroundColor White
+Write-Host "4. Delete all files EXCEPT folders and .err files" -ForegroundColor White
+Write-Host "5. Copy all files from data_backup to data folder" -ForegroundColor White
+Write-Host "6. Start MySQL in XAMPP" -ForegroundColor White

@@ -4,16 +4,20 @@ const errorMiddleware = (err, req, res, next) => {
 
     console.error(err);
 
-    // Sequelize unique constraint
-    if (err.name === 'SequelizeUniqueConstraintError') {
+    if (err.code === 11000) {
         statusCode = 400;
-        message = 'Duplicate field value entered';
+        const field = Object.keys(err.keyPattern || {})[0];
+        message = field ? `${field} already exists` : 'Duplicate field value entered';
     }
 
-    // Sequelize validation error
-    if (err.name === 'SequelizeValidationError') {
+    if (err.name === 'ValidationError') {
         statusCode = 400;
-        message = err.errors.map(e => e.message).join(', ');
+        message = Object.values(err.errors).map((error) => error.message).join(', ');
+    }
+
+    if (err.name === 'CastError' || err.name === 'BSONError') {
+        statusCode = 400;
+        message = 'Invalid identifier or value';
     }
 
     // JWT errors

@@ -1,29 +1,40 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/db');
-const User = require('./User');
-const Technician = require('./Technician');
+const mongoose = require('mongoose');
 
-const Booking = sequelize.define('Booking', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    customerId: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'id' } },
-    technicianId: { type: DataTypes.INTEGER, allowNull: false, references: { model: Technician, key: 'id' } },
-    serviceType: { type: DataTypes.STRING, allowNull: false },
-    description: { type: DataTypes.TEXT, allowNull: false },
-    bookingDate: { type: DataTypes.DATEONLY, allowNull: false },
-    bookingTime: { type: DataTypes.STRING, allowNull: false },
-    address: { type: DataTypes.STRING, allowNull: false },
-    status: { type: DataTypes.ENUM('pending', 'accepted', 'in_progress', 'completed', 'cancelled'), defaultValue: 'pending' },
-    estimatedCost: { type: DataTypes.FLOAT, defaultValue: 0 },
-    finalCost: { type: DataTypes.FLOAT, defaultValue: 0 },
-    notes: { type: DataTypes.TEXT },
-    cancellationReason: { type: DataTypes.STRING },
-    acceptedAt: { type: DataTypes.DATE },
-    completedAt: { type: DataTypes.DATE },
-    cancelledAt: { type: DataTypes.DATE },
-    technicianNotes: { type: DataTypes.TEXT }
-}, { timestamps: true });
+const bookingSchema = new mongoose.Schema({
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    technicianId: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', required: true },
+    serviceType: { type: String, required: true },
+    description: { type: String, required: true },
+    bookingDate: { type: String, required: true },
+    bookingTime: { type: String, required: true },
+    address: { type: String, required: true },
+    status: {
+        type: String,
+        enum: ['pending', 'accepted', 'in_progress', 'completed', 'cancelled'],
+        default: 'pending'
+    },
+    estimatedCost: { type: Number, default: 0 },
+    finalCost: { type: Number, default: 0 },
+    notes: { type: String },
+    cancellationReason: { type: String },
+    acceptedAt: { type: Date },
+    completedAt: { type: Date },
+    cancelledAt: { type: Date },
+    technicianNotes: { type: String }
+}, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
-Booking.belongsTo(User, { foreignKey: 'customerId', as: 'customer' });
-Booking.belongsTo(Technician, { foreignKey: 'technicianId', as: 'technician' });
+bookingSchema.virtual('customer', {
+    ref: 'User',
+    localField: 'customerId',
+    foreignField: '_id',
+    justOne: true
+});
 
-module.exports = Booking;
+bookingSchema.virtual('technician', {
+    ref: 'Technician',
+    localField: 'technicianId',
+    foreignField: '_id',
+    justOne: true
+});
+
+module.exports = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
